@@ -1,0 +1,16 @@
+.DS_Store
+
+# Local/private data
+docs/
+datasets/
+.writing-feedback-memory/
+prompt-system/
+
+# Generated packages
+*.zip
+
+# Tool caches
+__pycache__/
+.pytest_cache/
+.cache/
+node_modules/
