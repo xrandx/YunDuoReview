@@ -270,14 +270,16 @@ def build_prompt(source_names: List[str], pages: List[Dict[str, Any]]) -> str:
 核心要求：
 1. 尽量保留学生原文的换行、段首空格、标点、错别字、漏字、多字、重复字、涂改痕迹和无法确认的字。
 2. 不要把不通顺或疑似错别字自动改成通顺文本。
-3. 无法确认的字词在正文中标成 `【疑似：可能读法/原因】` 或 `【无法确认】`。
-4. 区分学生正文、疑似教师批注、疑似 OCR/手写识别问题。
-5. 只做 OCR 和客观疑点标注，不生成作文整体评价，不扩写，不润色，不代写。
-6. 定位只使用第几张图像、PDF 页码、可见段落或原文片段；不要要求精确到手写图片的单行位置。
+3. 所有错别字、漏字、多字、重复字、标点、格式、疑似教师批注、疑似 OCR/手写识别错误、无法确认内容，都只在 `raw_text` 正文中用 `【】` 紧跟原文片段做内联批注，不要单独列问题清单。
+4. 批注必须客观、简短，不做作文整体评价，不扩写，不润色，不代写。
+5. 如果原文字词可辨但疑似有问题，保留原文字词并在后面批注，例如：`以经【错别字，疑为“已经”】`、`的的【重复字】`、`，。【标点疑似多余】`。
+6. 如果字词无法确认，在对应位置写 `【无法确认】`；如果只是可能识别错，写 `原识别内容【疑似OCR/手写识别错误，可能是“...”】`。
+7. 如果识别到疑似教师批注、分数、修改符号等非学生正文，保留可见内容并标注 `【疑似教师批注】`。
+8. 不确定时标注“疑似”或“需要人工确认”，不要把推测当作事实。
 
 JSON 顶层结构必须包含这些字段：
 {{
-  "raw_text": "尽量保留版式的学生作文正文；多图或多页时用明确图像/页标记分隔",
+  "raw_text": "尽量保留版式的学生作文正文；多图或多页时用明确图像/页标记分隔；错别字或其他问题必须在正文内用【】紧跟原文片段批注",
   "metadata": {{
     "class_name": null,
     "grade": null,
@@ -285,16 +287,6 @@ JSON 顶层结构必须包含这些字段：
     "title": null,
     "topic_description": null
   }},
-  "issues": [
-    {{
-      "position": "第几张图像/PDF 页码/可见段落/原文片段；无法稳定定位时写原文片段",
-      "original": "原文或识别片段",
-      "type": "错别字 | 疑似OCR错误 | 疑似教师批注 | 无法确认 | 标点 | 格式 | 其他",
-      "suggestion": "建议写法或需要教师确认的点；不确定时写 null",
-      "certainty": "确定 | 疑似OCR | 无法确认",
-      "reason": "一句话说明判断依据"
-    }}
-  ],
   "warnings": [
     "低清晰度、遮挡、裁切、页数限制、无法识别区域等提示；没有则为空数组"
   ]
@@ -328,7 +320,10 @@ def build_messages(pages: List[Dict[str, Any]], source_names: List[str]) -> List
     return [
         {
             "role": "system",
-            "content": "你只输出合法 JSON。识别中文手写作文时必须保留原貌，不要擅自纠错。",
+            "content": (
+                "你只输出合法 JSON。识别中文手写作文时必须保留原貌，"
+                "不要擅自纠错；问题只允许用 raw_text 内的【】批注表达，不要输出 issues 字段。"
+            ),
         },
         {
             "role": "user",
@@ -382,18 +377,6 @@ def coerce_metadata(value: Any) -> Dict[str, Any]:
     return defaults
 
 
-def coerce_issue(value: Any) -> Dict[str, Any]:
-    issue = value if isinstance(value, dict) else {}
-    return {
-        "position": issue.get("position"),
-        "original": issue.get("original"),
-        "type": issue.get("type"),
-        "suggestion": issue.get("suggestion"),
-        "certainty": issue.get("certainty"),
-        "reason": issue.get("reason"),
-    }
-
-
 def text_or_empty(value: Any) -> str:
     if value is None:
         return ""
@@ -407,7 +390,6 @@ def parse_model_json(model_output: str, warnings: List[str]) -> Dict[str, Any]:
         return {
             "raw_text": "",
             "metadata": coerce_metadata({}),
-            "issues": [],
             "warnings": [
                 *warnings,
                 "模型输出不是合法 JSON，已保留原始输出到 raw_model_output。",
@@ -419,17 +401,12 @@ def parse_model_json(model_output: str, warnings: List[str]) -> Dict[str, Any]:
         return {
             "raw_text": "",
             "metadata": coerce_metadata({}),
-            "issues": [],
             "warnings": [
                 *warnings,
                 "模型输出的 JSON 顶层不是对象，已保留原始输出到 raw_model_output。",
             ],
             "raw_model_output": model_output,
         }
-
-    issues = parsed.get("issues", [])
-    if not isinstance(issues, list):
-        issues = []
 
     parsed_warnings = parsed.get("warnings") or []
     if not isinstance(parsed_warnings, list):
@@ -438,7 +415,6 @@ def parse_model_json(model_output: str, warnings: List[str]) -> Dict[str, Any]:
     return {
         "raw_text": text_or_empty(parsed.get("raw_text")),
         "metadata": coerce_metadata(parsed.get("metadata")),
-        "issues": [coerce_issue(issue) for issue in issues],
         "warnings": [*warnings, *[str(item) for item in parsed_warnings]],
     }
 

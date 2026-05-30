@@ -14,7 +14,7 @@ description: 为教师批改中文学生作文。适用于教师提供图片、P
 1. 读取学生作文。
    - 图片或扫描版 PDF：优先使用 `scripts/gemini_ocr.py` 做 OCR，识别文字时尽量保留原始换行、段首空格、错别字、标点、涂改痕迹和无法确认的字。
    - 如果教师提供 PDF 并指定页码或页码范围，先用 `scripts/pdf_pages_to_images.py` 将指定页转换为图片文件，再把生成的图片路径传给 `scripts/gemini_ocr.py` 做 OCR；页码按 PDF 阅读器显示的 1-based 页码理解。
-   - 读取 `scripts/gemini_ocr.py` 输出的 JSON：用 `raw_text` 作为学生原文，用 `metadata` 辅助确认班级、年级、姓名和题目，用 `issues` 和 `warnings` 标注疑似 OCR 问题、疑似教师批注和无法确认内容。
+   - 读取 `scripts/gemini_ocr.py` 输出的 JSON：用 `raw_text` 作为学生原文，正文里的 `【】` 批注表示错别字、疑似 OCR 问题、疑似教师批注或无法确认内容；用 `metadata` 辅助确认班级、年级、姓名和题目，用 `warnings` 记录低清晰度、遮挡、裁切等整体提示。
    - 可选中文字的 PDF、DOCX 或纯文本：直接提取文字，并保留一份规范化后的正文。
    - 对无法确认的识别结果，标成 `【疑似：...】`，不要悄悄改成通顺文本。
 
@@ -61,7 +61,7 @@ description: 为教师批改中文学生作文。适用于教师提供图片、P
 
 ## Gemini OCR 识别图片和扫描版 PDF
 
-当用户提供图片、扫描版 PDF，或需要从手写作文图片中提取文字时，使用 `scripts/gemini_ocr.py`。脚本会输出 JSON，包含 `raw_text`、`metadata`、`issues` 和 `warnings`，后续批改必须基于这些字段继续处理。
+当用户提供图片、扫描版 PDF，或需要从手写作文图片中提取文字时，使用 `scripts/gemini_ocr.py`。脚本会输出 JSON，包含 `raw_text`、`metadata` 和 `warnings`；错别字、疑似 OCR 问题、疑似教师批注或无法确认内容会以内联 `【】` 批注写在 `raw_text` 中，后续批改必须基于这些字段继续处理。
 
 首次使用或依赖缺失时，在本 Skill 目录内安装依赖：
 
