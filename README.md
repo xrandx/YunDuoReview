@@ -19,6 +19,8 @@
     ├── SKILL.md
     ├── agents/
     │   └── openai.yaml
+    ├── config/
+    │   └── gemini_ocr.example.json
     ├── requirements.txt
     ├── scripts/
     │   └── gemini_ocr.py
@@ -53,15 +55,17 @@ Skill 会按以下流程工作：
 
 ### 使用 Gemini OCR
 
-图片或扫描版 PDF 可以先用 Skill 内的 OCR 脚本识别为 JSON，再交给批改流程使用。脚本使用 Gemini 的 OpenAI 兼容接口，API Key 只从环境变量读取；多张图片可一次传入，并按输入顺序识别为同一篇作文。
+图片或扫描版 PDF 可以先用 Skill 内的 OCR 脚本识别为 JSON，再交给批改流程使用。脚本使用 Gemini 的 OpenAI 兼容接口；多张图片可一次传入，并按输入顺序识别为同一篇作文。
 
 ```bash
 python3 -m pip install -r writing-feedback/requirements.txt
-export GEMINI_API_KEY=你的 Gemini Key
+mkdir -p ~/.writing-feedback
+cp writing-feedback/config/gemini_ocr.example.json ~/.writing-feedback/gemini_ocr.json
+# 编辑 ~/.writing-feedback/gemini_ocr.json，填写 base_url、api_key、model_name
 python3 writing-feedback/scripts/gemini_ocr.py --input 第1页.jpg 第2页.jpg --output ocr.json
 ```
 
-默认模型和接口地址也可以通过环境变量或命令行参数覆盖：`GEMINI_MODEL`、`GEMINI_OPENAI_BASE_URL`、`--model`、`--base-url`。
+固定本地配置文件是 `~/.writing-feedback/gemini_ocr.json`，字段为 `base_url`、`api_key`、`model_name`。该文件放在用户目录，不在 Skill 目录内，避免提交或分发真实 Key。命令行参数 `--config` 可指定其他配置文件，`--model`、`--base-url` 可临时覆盖配置文件；没有配置文件时也可回退到环境变量。
 
 扫描版 PDF 需要 PyMuPDF，已包含在 `writing-feedback/requirements.txt` 中。输出 JSON 会包含 `raw_text`、`metadata`、`issues` 和 `warnings`。`metadata` 包含班级、年级、姓名、作文题目和作文题目描述；`issues` 会单独标注疑似错别字、疑似 OCR 错误、疑似教师批注和无法确认内容。
 

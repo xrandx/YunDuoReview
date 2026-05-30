@@ -27,6 +27,7 @@ output_path="${OUTPUT_DIR%/}/${zip_name}"
   cd "${REPO_ROOT}"
   zip -rq "${output_path}" writing-feedback \
     -x "*/.DS_Store" \
+    -x "writing-feedback/config/gemini_ocr.json" \
     -x "*/__pycache__/*" \
     -x "*/.pytest_cache/*"
 )

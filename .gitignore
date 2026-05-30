@@ -6,6 +6,9 @@ datasets/
 .writing-feedback-memory/
 prompt-system/
 
+# Local credentials
+writing-feedback/config/gemini_ocr.json
+
 # Generated packages
 *.zip
 

@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urlsplit, urlunsplit
 
 
+DEFAULT_CONFIG_PATH = Path.home() / ".writing-feedback" / "gemini_ocr.json"
 FALLBACK_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
 FALLBACK_MODEL = "gemini-2.5-flash"
 DEFAULT_BASE_URL = (
@@ -52,24 +53,30 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--model",
-        default=DEFAULT_MODEL,
+        default=None,
         help=(
-            "Model name. Default comes from GEMINI_MODEL, "
-            f"then falls back to {FALLBACK_MODEL}."
+            "Override model name. Default comes from config, GEMINI_MODEL, "
+            f"then {FALLBACK_MODEL}."
         ),
     )
     parser.add_argument(
         "--base-url",
-        default=DEFAULT_BASE_URL,
+        default=None,
         help=(
-            "OpenAI-compatible base URL. Default comes from GEMINI_OPENAI_BASE_URL "
-            f"or GEMINI_BASE_URL, then falls back to {FALLBACK_BASE_URL}."
+            "Override OpenAI-compatible base URL. Default comes from config, "
+            "GEMINI_OPENAI_BASE_URL or GEMINI_BASE_URL, "
+            f"then {FALLBACK_BASE_URL}."
         ),
+    )
+    parser.add_argument(
+        "--config",
+        default=str(DEFAULT_CONFIG_PATH),
+        help=f"Local config JSON path. Default: {DEFAULT_CONFIG_PATH}",
     )
     parser.add_argument(
         "--api-key-env",
         default="GEMINI_API_KEY",
-        help="Environment variable that stores the Gemini API key. Default: GEMINI_API_KEY.",
+        help="Fallback environment variable for the Gemini API key. Default: GEMINI_API_KEY.",
     )
     parser.add_argument(
         "--page-limit",
@@ -78,6 +85,63 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         help="Maximum pages to process from a PDF. Default: 20.",
     )
     return parser.parse_args(argv)
+
+
+def load_config(path: Path) -> Dict[str, Any]:
+    if not path.exists():
+        return {}
+    if not path.is_file():
+        raise OcrError(f"配置路径不是文件：{path}")
+
+    try:
+        parsed = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise OcrError(f"配置文件不是合法 JSON：{path}。原因：{exc}") from exc
+
+    if not isinstance(parsed, dict):
+        raise OcrError(f"配置文件顶层必须是 JSON 对象：{path}")
+
+    return parsed
+
+
+def first_config_value(config: Dict[str, Any], keys: List[str]) -> Optional[str]:
+    for key in keys:
+        value = config.get(key)
+        if value is not None and str(value).strip():
+            return str(value).strip()
+    return None
+
+
+def resolve_runtime_options(args: argparse.Namespace) -> Tuple[str, str, str]:
+    config_path = Path(args.config).expanduser()
+    config = load_config(config_path)
+
+    model = (
+        args.model
+        or first_config_value(config, ["model", "model_name", "modelname"])
+        or os.environ.get("GEMINI_MODEL")
+        or DEFAULT_MODEL
+    )
+    base_url = (
+        args.base_url
+        or first_config_value(config, ["base_url", "baseurl"])
+        or os.environ.get("GEMINI_OPENAI_BASE_URL")
+        or os.environ.get("GEMINI_BASE_URL")
+        or DEFAULT_BASE_URL
+    )
+    api_key = (
+        first_config_value(config, ["api_key", "key"])
+        or os.environ.get(args.api_key_env)
+        or ""
+    )
+
+    if not api_key:
+        raise OcrError(
+            f"缺少 API Key：请在配置文件 {config_path} 中填写 api_key，"
+            f"或设置环境变量 {args.api_key_env}。"
+        )
+
+    return model, base_url, api_key
 
 
 def encode_data_url(image_bytes: bytes, mime_type: str) -> str:
@@ -384,15 +448,11 @@ def run_ocr(
     input_paths: List[Path],
     model: str,
     base_url: str,
-    api_key_env: str,
+    api_key: str,
     page_limit: int,
 ) -> Dict[str, Any]:
     pages, warnings = load_inputs(input_paths, page_limit)
     source_names = [path.name for path in input_paths]
-
-    api_key = os.environ.get(api_key_env)
-    if not api_key:
-        raise OcrError(f"缺少 API Key：请先设置环境变量 {api_key_env}。")
 
     try:
         from openai import OpenAI
@@ -442,11 +502,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     output_path = Path(args.output).expanduser() if args.output else None
 
     try:
+        model, base_url, api_key = resolve_runtime_options(args)
         result = run_ocr(
             input_paths=input_paths,
-            model=args.model,
-            base_url=args.base_url,
-            api_key_env=args.api_key_env,
+            model=model,
+            base_url=base_url,
+            api_key=api_key,
             page_limit=args.page_limit,
         )
         write_result(result, output_path)
