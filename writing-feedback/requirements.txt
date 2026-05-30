@@ -1,0 +1,4 @@
+openai>=1.0.0
+
+# Required for scanned PDF inputs.
+pymupdf>=1.23.0

@@ -4,8 +4,8 @@
 
 ## 项目内容
 
-- `writing-feedback/`：可安装的 Skill，包含工作流程、年级评价标准、客观批改规则、输出格式和写作脚手架规则。
-- `scripts/`：辅助脚本，目前包含 Skill 打包脚本。
+- `writing-feedback/`：可安装的 Skill，包含工作流程、年级评价标准、客观批改规则、输出格式、写作脚手架规则和 Gemini OCR 辅助脚本。
+- `scripts/`：仓库辅助脚本，目前包含 Skill 打包脚本。
 
 ## 目录结构
 
@@ -19,6 +19,9 @@
     ├── SKILL.md
     ├── agents/
     │   └── openai.yaml
+    ├── requirements.txt
+    ├── scripts/
+    │   └── gemini_ocr.py
     └── references/
         ├── objective-correction.md
         ├── output-format.md
@@ -47,6 +50,20 @@ Skill 会按以下流程工作：
 3. 读取对应年级评价标准、客观批改规则和输出格式。
 4. 输出可定位的客观修改意见、整体评价、成长点和具体修改任务。
 5. 在需要时生成年级化写作脚手架。
+
+### 使用 Gemini OCR
+
+图片或扫描版 PDF 可以先用 Skill 内的 OCR 脚本识别为 JSON，再交给批改流程使用。脚本使用 Gemini 的 OpenAI 兼容接口，API Key 只从环境变量读取；多张图片可一次传入，并按输入顺序识别为同一篇作文。
+
+```bash
+python3 -m pip install -r writing-feedback/requirements.txt
+export GEMINI_API_KEY=你的 Gemini Key
+python3 writing-feedback/scripts/gemini_ocr.py --input 第1页.jpg 第2页.jpg --output ocr.json
+```
+
+默认模型和接口地址也可以通过环境变量或命令行参数覆盖：`GEMINI_MODEL`、`GEMINI_OPENAI_BASE_URL`、`--model`、`--base-url`。
+
+扫描版 PDF 需要 PyMuPDF，已包含在 `writing-feedback/requirements.txt` 中。输出 JSON 会包含 `raw_text`、`metadata`、`issues` 和 `warnings`。`metadata` 包含班级、年级、姓名、作文题目和作文题目描述；`issues` 会单独标注疑似错别字、疑似 OCR 错误、疑似教师批注和无法确认内容。
 
 ### 打包 Skill
 
