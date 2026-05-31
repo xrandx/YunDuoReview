@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""OCR helper for the writing-feedback skill using Gemini's OpenAI API format."""
+"""OCR helper for the YunDuoReview skill using Gemini's OpenAI API format."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urlsplit, urlunsplit
 
 
-DEFAULT_CONFIG_PATH = Path.home() / ".writing-feedback" / "gemini_ocr.json"
+DEFAULT_CONFIG_PATH = Path.home() / ".YunDuoReview" / "gemini_ocr.json"
 FALLBACK_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
 FALLBACK_MODEL = "gemini-2.5-flash"
 DEFAULT_BASE_URL = (
@@ -434,7 +434,7 @@ def run_ocr(
         from openai import OpenAI
     except ImportError as exc:
         raise OcrError(
-            "缺少 Python 依赖 openai。请先安装：python3 -m pip install -r writing-feedback/requirements.txt"
+            "缺少 Python 依赖 openai。请先安装：python3 -m pip install -r YunDuoReview/requirements.txt"
         ) from exc
 
     client = OpenAI(api_key=api_key, base_url=normalize_openai_base_url(base_url))

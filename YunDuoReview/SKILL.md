@@ -1,13 +1,13 @@
 ---
-name: writing-feedback
-description: 为教师批改中文学生作文。适用于教师提供图片、PDF、DOCX 或文本格式的学生作文，需要识别或提取正文、确认班级姓名题目等元信息、按 3-4 年级/5-6 年级/7-9 年级评价标准批改、输出客观修改意见和整体评价，并读取或更新 .writing-feedback-memory 中的教师批改标准与学生写作画像。
+name: YunDuoReview
+description: 为教师批改中文学生作文。适用于教师提供图片、PDF、DOCX 或文本格式的学生作文，需要识别或提取正文、确认班级姓名题目等元信息、按 3-4 年级/5-6 年级/7-9 年级评价标准批改、输出客观修改意见和整体评价，并读取或更新 .YunDuoReview-memory 中的教师批改标准与学生写作画像。
 ---
 
-# 写作反馈助手
+# 云朵批批（YunDuoReview）
 
 ## 核心原则
 
-服务教师。先保留学生原文，再做判断；先分清客观错误和整体评价，再给修改建议；长期记忆统一放在 `.writing-feedback-memory/`。除非特别说明，本文件中的 `scripts/` 和 `references/` 路径都相对本 Skill 目录。
+服务教师。先保留学生原文，再做判断；先分清客观错误和整体评价，再给修改建议；长期记忆统一放在 `.YunDuoReview-memory/`。除非特别说明，本文件中的 `scripts/` 和 `references/` 路径都相对本 Skill 目录。
 
 ## 工作流程
 
@@ -24,8 +24,8 @@ description: 为教师批改中文学生作文。适用于教师提供图片、P
    - 根据年级选择评价标准：3-4 年级、5-6 年级、7-9 年级。
 
 3. 读取写作记忆。
-   - 读取 `.writing-feedback-memory/teacher-critic.md`。如果不存在，按 `references/teacher-critic-template.md` 创建。
-   - 读取 `.writing-feedback-memory/student-writing-profile/{班级}/{姓名}.md`。如果不存在，在教师确认保存后按 `references/student-writing-profile-template.md` 创建。
+   - 读取 `.YunDuoReview-memory/teacher-critic.md`。如果不存在，按 `references/teacher-critic-template.md` 创建。
+   - 读取 `.YunDuoReview-memory/student-writing-profile/{班级}/{姓名}.md`。如果不存在，在教师确认保存后按 `references/student-writing-profile-template.md` 创建。
    - 不要编造历史表现。没有画像时，要说明本次判断只基于当前作文。
 
 4. 读取对应年级评价标准。
@@ -41,8 +41,8 @@ description: 为教师批改中文学生作文。适用于教师提供图片、P
    - 最后给 1-3 条适合该年级的具体修改任务。
 
 6. 只在教师接受反馈或明确要求保存后更新记忆。
-   - 将教师明确提出的偏好、或从教师多次修改中体现出的稳定标准，更新到 `.writing-feedback-memory/teacher-critic.md`。
-   - 将可观察的写作表现、反复问题、新优点和下次关注点，更新到 `.writing-feedback-memory/student-writing-profile/{班级}/{姓名}.md`。
+   - 将教师明确提出的偏好、或从教师多次修改中体现出的稳定标准，更新到 `.YunDuoReview-memory/teacher-critic.md`。
+   - 将可观察的写作表现、反复问题、新优点和下次关注点，更新到 `.YunDuoReview-memory/student-writing-profile/{班级}/{姓名}.md`。
    - 避免给学生贴人格标签。只记录写作证据，不记录性格判断。
 
 ## 记忆目录
@@ -50,7 +50,7 @@ description: 为教师批改中文学生作文。适用于教师提供图片、P
 使用仓库内的这个结构：
 
 ```text
-.writing-feedback-memory/
+.YunDuoReview-memory/
   teacher-critic.md
   student-writing-profile/
     {班级}/
@@ -69,30 +69,30 @@ description: 为教师批改中文学生作文。适用于教师提供图片、P
 python3 -m pip install -r requirements.txt
 ```
 
-默认配置文件为 `~/.writing-feedback/gemini_ocr.json`，也可以通过环境变量 `GEMINI_API_KEY`、`GEMINI_MODEL`、`GEMINI_OPENAI_BASE_URL` 或命令行参数覆盖。如果缺少 API Key，不要伪造 OCR 结果，应提示教师补充配置或改用可提取文字的输入。
+默认配置文件为 `~/.YunDuoReview/gemini_ocr.json`，也可以通过环境变量 `GEMINI_API_KEY`、`GEMINI_MODEL`、`GEMINI_OPENAI_BASE_URL` 或命令行参数覆盖。如果缺少 API Key，不要伪造 OCR 结果，应提示教师补充配置或改用可提取文字的输入。
 
 多张图片属于同一篇作文时，按作文页序传入：
 
 ```bash
-python3 scripts/gemini_ocr.py --input 第1页.jpg 第2页.jpg --output /tmp/writing-feedback-ocr.json
+python3 scripts/gemini_ocr.py --input 第1页.jpg 第2页.jpg --output /tmp/YunDuoReview-ocr.json
 ```
 
 扫描版 PDF 未指定页码时，可以直接传入 PDF；默认最多处理前 20 页，可用 `--page-limit` 调整：
 
 ```bash
-python3 scripts/gemini_ocr.py --input 作文.pdf --page-limit 6 --output /tmp/writing-feedback-ocr.json
+python3 scripts/gemini_ocr.py --input 作文.pdf --page-limit 6 --output /tmp/YunDuoReview-ocr.json
 ```
 
 当用户给出 PDF 文件并指定只处理某一页或某几页时，先运行：
 
 ```bash
-python3 scripts/pdf_pages_to_images.py 作文.pdf --pages 2,4-5 --out-dir /tmp/writing-feedback-pages --json
+python3 scripts/pdf_pages_to_images.py 作文.pdf --pages 2,4-5 --out-dir /tmp/YunDuoReview-pages --json
 ```
 
 脚本会把指定页渲染为图片，输出生成图片的绝对路径。随后将这些图片路径按页序传给 Gemini OCR：
 
 ```bash
-python3 scripts/gemini_ocr.py --input /tmp/writing-feedback-pages/作文_page_0002.png /tmp/writing-feedback-pages/作文_page_0004.png /tmp/writing-feedback-pages/作文_page_0005.png --output /tmp/writing-feedback-ocr.json
+python3 scripts/gemini_ocr.py --input /tmp/YunDuoReview-pages/作文_page_0002.png /tmp/YunDuoReview-pages/作文_page_0004.png /tmp/YunDuoReview-pages/作文_page_0005.png --output /tmp/YunDuoReview-ocr.json
 ```
 
 `pdf_pages_to_images.py` 默认使用 300 DPI；如果图片过大，可用 `--dpi 220` 降低分辨率。脚本依赖 PyMuPDF（Python 包名 `fitz`），缺失时按脚本提示安装后再运行。

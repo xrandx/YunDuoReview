@@ -3,11 +3,12 @@
 # Local/private data
 docs/
 datasets/
-.writing-feedback-memory/
+.YunDuoReview-memory/
 prompt-system/
 
 # Local credentials
-writing-feedback/config/gemini_ocr.json
+.YunDuoReview/
+YunDuoReview/config/gemini_ocr.json
 
 # Generated packages
 *.zip

@@ -1,5 +1,0 @@
-{
-  "base_url": "https://www.packyapi.com/v1/chat/completions",
-  "api_key": "替换为你的 Gemini/OpenAI 兼容接口 Key",
-  "model_name": "gemini-2.5-flash"
-}

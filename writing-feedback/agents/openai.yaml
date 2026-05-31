@@ -1,4 +1,0 @@
-interface:
-  display_name: "写作反馈助手"
-  short_description: "教师作文批改、画像记忆与年级化写作脚手架"
-  default_prompt: "使用 $writing-feedback 批改学生作文，并按年级生成写作脚手架和更新画像记忆。"
